@@ -1,0 +1,60 @@
+#!/bin/bash -e
+
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
+
+case "$1" in
+  -v|--version)
+    version="$2"
+esac
+
+echo 'Installing SQL Anywhere'
+mkdir -p $OPENSHIFT_SA_DIR/versions/${OPENSHIFT_SA_VERSION}/
+cd $OPENSHIFT_SA_DIR/versions/${OPENSHIFT_SA_VERSION}/
+wget http://d5d4ifzqzkhwt.cloudfront.net/sqla16developer/bin/sqla16developeropenshift.tar.gz
+tar -xf $OPENSHIFT_SA_DIR/versions/${OPENSHIFT_SA_VERSION}/sqla16developeropenshift.tar.gz -C "${OPENSHIFT_SA_DIR}/"
+echo 'SQL Anywhere extracted'
+
+chmod 0700 $OPENSHIFT_SA_DIR/data
+
+env_dir="${OPENSHIFT_SA_DIR}/env"
+SA_DB_NAME=demo
+SA_USERNAME=$(generate_username)
+SA_PASSWORD=$(generate_password)
+set_env_var 'SA_DB_NAME' ${SA_DB_NAME} $env_dir
+set_env_var 'SA_USERNAME' ${SA_USERNAME} $env_dir
+set_env_var 'SA_PASSWORD' ${SA_PASSWORD} $env_dir
+
+SATMP=/tmp; export SATMP
+echo 'Environment Variables configured'
+
+# Create a database
+echo "Creating a database"
+dbinit -dba ${SA_USERNAME},${SA_PASSWORD} -p 4k $OPENSHIFT_SA_DIR/data/sqa.db
+echo "Database created"
+
+client_result ""
+client_result "============================="
+client_result "SQL Anywhere ${OPENSHIFT_SA_VERSION} database added.  Please take note of these credentials:"
+client_result ""
+client_result "Database Name: ${SA_DB_NAME}"
+client_result ""
+client_result "DB User Name: ${SA_USERNAME}"
+client_result ""
+client_result "DB User Password: ${SA_PASSWORD}"
+client_result ""
+client_result "DB Host: ${OPENSHIFT_SA_DB_HOST}"
+client_result ""
+client_result "DB Port: ${OPENSHIFT_SA_DB_PORT}"
+#client_result ""
+#client_result "Environment Parameters: LD_LIBRARY_PATH=$OPENSHIFT_SA_DIR/sqlanywhere${OPENSHIFT_SA_VERSION}/lib64"
+#client_result "Environment Parameters: PATH=$OPENSHIFT_SA_DIR/sqlanywhere${OPENSHIFT_SA_VERSION}/bin64"
+client_result "============================="
+client_result ""
+
+cart_props "username=${SA_USERNAME}"
+cart_props "password=${SA_PASSWORD}"
+cart_props "database_name=${SA_DB_NAME}"
+cart_props "sa_db_host=${OPENSHIFT_SA_DB_HOST}"
+cart_props "sa_db_port=${OPENSHIFT_SA_DB_PORT}"
+
+set_app_info "Database Name: ${SA_DB_NAME}; DB User Name: ${SA_USERNAME}; DB User Password: ${SA_PASSWORD}; DB Host: ${OPENSHIFT_SA_DB_HOST}; DB Port: ${OPENSHIFT_SA_DB_PORT}"

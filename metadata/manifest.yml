@@ -1,0 +1,56 @@
+Name: sybase-sa
+Namespace: SYBASE-SA
+Architecture: noarch
+Cartridge-Short-Name: SA
+Cartridge-Version:    '0.0.1'
+Compatible-Versions:   [0.0.1]
+Cartridge-Vendor:     sap
+Display-Name: SAP SQL Anywhere 16
+Description: "SQL Anywhere database software engine"
+Version:   '16'
+Source-Url: git://github.com/efarrar/openshift-origin-cartridge-sybase-sa.git
+Versions:  ['16']
+License:   Developer License
+Vendor:    SAP 
+Website: http://www.sybase.com
+Categories:
+  - service
+  - database
+  - embedded
+Help-Topics:
+  - "TBD"
+Cart-Data:
+  - Key: username
+    Type: cart_data
+    Description: "Admin user"
+  - Key: password
+    Type: cart_data
+    Description: "Password for admin user"
+  - Key: database_name
+    Type: cart_data
+    Description: "DB name"
+  - Key: connection_command
+    Type: cart_data
+    Description: "DB connection command"
+Provides:
+  - sybase-sa-16
+  - "sa"
+  - "sa(version) = 16"
+Publishes:
+  publish-db-connection-info:
+    Type: "ENV:NET_TCP:db:connection-info"
+Scaling:
+  Min: 1
+  Max: 1
+Endpoints:
+  - Private-IP-Name:   DB_HOST
+    Private-Port-Name: DB_PORT
+    Private-Port:      2638
+    Public-Port-Name:  DB_PROXY_PORT
+Version-Overrides:
+  '16':
+    Display-Name: SQL Anywhere Database 16
+    Provides:
+      - sybase-sa-16
+      - "sa"
+      - "sa(version) = 16"

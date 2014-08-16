@@ -1,0 +1,194 @@
+#!/bin/bash
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
+
+function check_license {
+# Display License File
+client_result "======= SAP License ========="
+while read -r line; do client_result "$line"; done < $OPENSHIFT_SA_DIR/license/license.txt
+client_result "==== End of SAP License ====="
+client_result ""
+client_result "======= MUST READ ==========="
+client_result "You haven't accepted the license agreement,"
+client_result "thus the use of the cartridge is prohibited."
+client_result "-----------------------------"
+client_result "To indicate that you accept this license, "
+client_result "please set the ACCEPT_SAP_LICENSE_SA variable to "Y" with command:"
+client_result "  rhc set-env ACCEPT_SAP_LICENSE_SA=Y --app ${OPENSHIFT_APP_NAME}"
+client_result "then start the cartridge with command:"
+client_result "  rhc cartridge-start sybase-sa-${OPENSHIFT_SA_VERSION} --app ${OPENSHIFT_APP_NAME}"
+client_result "============================="
+return 0
+}
+
+function _start_sa {
+  dbspawn dbsrv16 -n ${SA_DB_NAME} -oe ${OPENSHIFT_LOG_DIR}sa-startup.log -o ${OPENSHIFT_LOG_DIR}sa.log -on 10m -x tcpip{MyIP=${OPENSHIFT_SA_DB_HOST}\;port=${OPENSHIFT_SA_DB_PORT}} $OPENSHIFT_SA_DIR/data/sqa.db -n ${SA_DB_NAME}
+}
+
+function _stop_sa {
+  dbstop -y -c "server=${SA_DB_NAME};uid=${SA_USERNAME};pwd=${SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})"
+}
+
+function _is_running {
+  dbping -q -c "server=${SA_DB_NAME};uid=${SA_USERNAME};pwd=${SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})" &> /dev/null
+  return $?
+}
+
+function wait_for_sa_availability {
+  for i in {1..30}; do
+    _is_running && return 0
+    sleep 1
+  done
+  return 1
+}
+
+function start {
+if [ ${ACCEPT_SAP_LICENSE_SA} == Y ] || [ ${ACCEPT_SAP_LICENSE_SA} == y ]; then
+  if ! _is_running; then
+    echo "Starting SQL Anywhere"
+    _start_sa
+    wait_for_sa_availability || error "Could not start SQL Anywhere" 70
+    sleep 30
+    echo "SQL Anywhere started"
+  else
+    echo "SQL Anywhere already running"
+  fi
+  return 0
+else
+  check_license
+fi
+}
+
+function stop {
+  if _is_running; then
+    _stop_sa
+    if _is_running; then
+      error "Could not stop SA" 70
+    else
+      echo "SA stopped"
+    fi
+  else
+    echo "SA already stopped"
+  fi
+  return 0
+}
+
+function status {
+  if _is_running; then
+    client_result "SQL Anywhere is running"
+  else
+    client_result "SQL Anywhere is stopped"
+  fi
+
+  exit 0
+}
+
+function pre_snapshot {
+  start
+  echo "${OPENSHIFT_SA_VERSION}" > $OPENSHIFT_DATA_DIR/sa_version
+#  echo "${OPENSHIFT_SA_DB_PORT}" > $OPENSHIFT_DATA_DIR/sa_db_port
+#  echo "${OPENSHIFT_SA_IDENT}" > $OPENSHIFT_DATA_DIR/sa_ident
+#  echo "${SA_DB_NAME}" > $OPENSHIFT_DATA_DIR/sa_db_name
+#  echo "${SA_USERNAME}" > $OPENSHIFT_DATA_DIR/sa_username
+#  echo "${SA_PASSWORD}" > $OPENSHIFT_DATA_DIR/sa_password
+#  echo "${SA}" > $OPENSHIFT_DATA_DIR/sa
+#  echo "${SADATA}" > $OPENSHIFT_DATA_DIR/sadata
+
+  if [ -d $OPENSHIFT_DATA_DIR/SAbackup ] 
+  then
+    rm -rf $OPENSHIFT_DATA_DIR/SAbackup
+  fi
+  mkdir $OPENSHIFT_DATA_DIR/SAbackup
+  dbbackup -s -c "server=${SA_DB_NAME};uid=${SA_USERNAME};pwd=${SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})" $OPENSHIFT_DATA_DIR/SAbackup 
+
+  # Backup the accepted_license file
+  cp $OPENSHIFT_SA_DIR/license/license_accepted  $OPENSHIFT_DATA_DIR/SAbackup/
+
+  stop
+
+  cd ${OPENSHIFT_DATA_DIR}/
+  /bin/tar zcf ${OPENSHIFT_DATA_DIR}/SAbackup.tgz SAbackup/
+
+  # Clean Up
+  rm -rf SAbackup/
+}
+
+function pre_restore {
+return 0
+}
+
+function post_restore {
+  if [ ! -f $OPENSHIFT_DATA_DIR/sa_version ]
+  then
+    if [ "$OPENSHIFT_SA_VERSION" != "16" ]
+    then
+      warning "WARNING: SA snapshot must have a file named sa_version containing software version in app-root/data"
+      return
+    else
+      old_version="16"
+    fi
+  else
+    old_version=$(< $OPENSHIFT_DATA_DIR/sa_version)
+  fi
+
+  if [ "$old_version" != "$OPENSHIFT_SA_VERSION" ]
+  then
+    warning "WARNING: Restore skipped. Reason: SQL Anywhere restore to version $OPENSHIFT_SA_VERSION attempted from a different version: $old_version."
+    start
+    return
+  fi
+
+  if [ -f $OPENSHIFT_DATA_DIR/SAbackup.tgz ]; then
+    cd ${OPENSHIFT_SA_DIR}
+    /bin/tar zxf $OPENSHIFT_DATA_DIR/SAbackup.tgz
+    if [ -f $OPENSHIFT_SA_DIR/SAbackup/sqa.db ] && [ -f $OPENSHIFT_SA_DIR/SAbackup/sqa.log ]; then
+      rm -f ${OPENSHIFT_SA_DIR}/data/sqa.*
+      mv ${OPENSHIFT_SA_DIR}/SAbackup/*.* ${OPENSHIFT_SA_DIR}/data/ 
+      start
+    else
+      echo "SQL Anywhere restore attempted but no data file found in backup!" 1>&2
+      echo "sqa.db does not exist" 1>&2
+    fi
+    # Clean Up
+    local dumpfiles=(
+      ${OPENSHIFT_SA_DIR}/SAbackup
+      ${OPENSHIFT_DATA_DIR}/SAbackup.tgz
+      ${OPENSHIFT_DATA_DIR}/sa_version
+    )
+    for file in "${dumpfiles[@]}"
+    do
+      rm -rf $file
+    done
+  else
+    echo "SQL Anywhere restore attempted but no backup found!" 1>&2
+    echo "$OPENSHIFT_DATA_DIR/SAbackup.tgz does not exist" 1>&2
+  fi
+}
+
+case "$1" in
+  start)
+    start
+  ;;
+  stop)
+    stop
+  ;;
+  status)
+    status
+  ;;
+  restart)
+    stop
+    start
+  ;;
+  pre-snapshot)
+    pre_snapshot
+  ;;
+  pre-restore)
+    pre_restore
+  ;;
+  post-restore)
+    post_restore
+  ;;
+  *)
+    echo 0
+  ;;
+esac
+
