@@ -8,7 +8,7 @@ Cartridge-Vendor:     sap
 Display-Name: SAP SQL Anywhere 16
 Description: "SQL Anywhere database software engine"
 Version:   '16'
-Source-Url: git://github.com/efarrar/openshift-origin-cartridge-sybase-sa.git
+Source-Url: git://github.com/sqlanywhere/openshift-sqlanywhere.git
 Versions:  ['16']
 License:   Developer License
 Vendor:    SAP 
