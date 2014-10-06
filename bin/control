@@ -104,26 +104,27 @@ function status {
 }
 
 function pre_snapshot {
-  start
-  echo "${OPENSHIFT_SA_VERSION}" > $OPENSHIFT_DATA_DIR/sa_version
+#  start
+#  echo "${OPENSHIFT_SA_VERSION}" > $OPENSHIFT_DATA_DIR/sa_version
 
-  if [ -d $OPENSHIFT_DATA_DIR/SAbackup ] 
-  then
-    rm -rf $OPENSHIFT_DATA_DIR/SAbackup
-  fi
-  mkdir $OPENSHIFT_DATA_DIR/SAbackup
-  dbbackup -s -c "server=${OPENSHIFT_SA_DB_NAME};uid=${OPENSHIFT_SA_USERNAME};pwd=${OPENSHIFT_SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})" $OPENSHIFT_DATA_DIR/SAbackup 
+#  if [ -d $OPENSHIFT_DATA_DIR/SAbackup ] 
+#  then
+#    rm -rf $OPENSHIFT_DATA_DIR/SAbackup
+#  fi
+#  mkdir $OPENSHIFT_DATA_DIR/SAbackup
+#  dbbackup -s -c "server=${OPENSHIFT_SA_DB_NAME};uid=${OPENSHIFT_SA_USERNAME};pwd=${OPENSHIFT_SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})" $OPENSHIFT_DATA_DIR/SAbackup 
 
   # Backup the accepted_license file
   #cp $OPENSHIFT_SA_DIR/license/license_accepted  $OPENSHIFT_DATA_DIR/SAbackup/
 
-  stop
+#  stop
 
-  cd ${OPENSHIFT_DATA_DIR}/
-  /bin/tar zcf ${OPENSHIFT_DATA_DIR}/SAbackup.tgz SAbackup/
+#  cd ${OPENSHIFT_DATA_DIR}/
+#  /bin/tar zcf ${OPENSHIFT_DATA_DIR}/SAbackup.tgz SAbackup/
 
   # Clean Up
-  rm -rf SAbackup/
+#  rm -rf SAbackup/
+  /bin/tar czf $OPENSHIFT_DATA_DIR/sqlanywhere_backup.tar.gz $OPENSHIFT_SA_DIR/data/
 }
 
 function pre_restore {
@@ -131,51 +132,52 @@ return 0
 }
 
 function post_restore {
-  if [ ! -f $OPENSHIFT_DATA_DIR/sa_version ]
-  then
-    if [ "$OPENSHIFT_SA_VERSION" != "16" ]
-    then
-      warning "WARNING: SA snapshot must have a file named sa_version containing software version in app-root/data"
-      return
-    else
-      old_version="16"
-    fi
-  else
-    old_version=$(< $OPENSHIFT_DATA_DIR/sa_version)
-  fi
+  /bin/tar xvf $OPENSHIFT_DATA_DIR/sqlanywhere_backup.tar.gz $OPENSHIFT_SA_DIR/data/
+#  if [ ! -f $OPENSHIFT_DATA_DIR/sa_version ]
+#  then
+#    if [ "$OPENSHIFT_SA_VERSION" != "16" ]
+#    then
+#      warning "WARNING: SA snapshot must have a file named sa_version containing software version in app-root/data"
+#      return
+#    else
+#      old_version="16"
+#    fi
+#  else
+#    old_version=$(< $OPENSHIFT_DATA_DIR/sa_version)
+#  fi
 
-  if [ "$old_version" != "$OPENSHIFT_SA_VERSION" ]
-  then
-    warning "WARNING: Restore skipped. Reason: SQL Anywhere restore to version $OPENSHIFT_SA_VERSION attempted from a different version: $old_version."
-    start
-    return
-  fi
+#  if [ "$old_version" != "$OPENSHIFT_SA_VERSION" ]
+#  then
+#    warning "WARNING: Restore skipped. Reason: SQL Anywhere restore to version $OPENSHIFT_SA_VERSION attempted from a different version: $old_version."
+#    start
+#    return
+#  fi
 
-  if [ -f $OPENSHIFT_DATA_DIR/SAbackup.tgz ]; then
-    cd ${OPENSHIFT_SA_DIR}
-    /bin/tar zxf $OPENSHIFT_DATA_DIR/SAbackup.tgz
-    if [ -f $OPENSHIFT_SA_DIR/SAbackup/sqa.db ] && [ -f $OPENSHIFT_SA_DIR/SAbackup/sqa.log ]; then
-      rm -f ${OPENSHIFT_SA_DIR}/data/sqa.*
-      mv ${OPENSHIFT_SA_DIR}/SAbackup/*.* ${OPENSHIFT_SA_DIR}/data/ 
-      start
-    else
-      echo "SQL Anywhere restore attempted but no data file found in backup!" 1>&2
-      echo "sqa.db does not exist" 1>&2
-    fi
-    # Clean Up
-    local dumpfiles=(
-      ${OPENSHIFT_SA_DIR}/SAbackup
-      ${OPENSHIFT_DATA_DIR}/SAbackup.tgz
-      ${OPENSHIFT_DATA_DIR}/sa_version
-    )
-    for file in "${dumpfiles[@]}"
-    do
-      rm -rf $file
-    done
-  else
-    echo "SQL Anywhere restore attempted but no backup found!" 1>&2
-    echo "$OPENSHIFT_DATA_DIR/SAbackup.tgz does not exist" 1>&2
-  fi
+#  if [ -f $OPENSHIFT_DATA_DIR/SAbackup.tgz ]; then
+#    cd ${OPENSHIFT_SA_DIR}
+#    /bin/tar zxf $OPENSHIFT_DATA_DIR/SAbackup.tgz
+#    if [ -f $OPENSHIFT_SA_DIR/SAbackup/sqa.db ] && [ -f $OPENSHIFT_SA_DIR/SAbackup/sqa.log ]; then
+#      rm -f ${OPENSHIFT_SA_DIR}/data/sqa.*
+#      mv ${OPENSHIFT_SA_DIR}/SAbackup/*.* ${OPENSHIFT_SA_DIR}/data/ 
+#      start
+#    else
+#      echo "SQL Anywhere restore attempted but no data file found in backup!" 1>&2
+#      echo "sqa.db does not exist" 1>&2
+#    fi
+#    # Clean Up
+#    local dumpfiles=(
+#      ${OPENSHIFT_SA_DIR}/SAbackup
+#      ${OPENSHIFT_DATA_DIR}/SAbackup.tgz
+#      ${OPENSHIFT_DATA_DIR}/sa_version
+#    )
+#    for file in "${dumpfiles[@]}"
+#    do
+#      rm -rf $file
+#    done
+#  else
+#    echo "SQL Anywhere restore attempted but no backup found!" 1>&2
+#    echo "$OPENSHIFT_DATA_DIR/SAbackup.tgz does not exist" 1>&2
+#  fi
 }
 
 case "$1" in
