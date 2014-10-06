@@ -1,6 +1,8 @@
 #!/bin/bash
 source $OPENSHIFT_CARTRIDGE_SDK_BASH
 
+env_dir="${OPENSHIFT_SA_DIR}/env"
+
 function check_license {
 # Display License File
 client_result "======= SAP License ========="
