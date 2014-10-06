@@ -1,18 +1,16 @@
-Name: sybase-sa
-Namespace: SYBASE-SA
-Architecture: noarch
+Name: sqlanywhere
+Display-Name: SQL Anywhere 16
 Cartridge-Short-Name: SA
 Cartridge-Version:    '0.0.1'
 Compatible-Versions:   [0.0.1]
 Cartridge-Vendor:     sap
-Display-Name: SAP SQL Anywhere 16
-Description: "SQL Anywhere database software engine"
+Description: "SAP SQL Anywhere database software engine"
 Version:   '16'
 Source-Url: git://github.com/sqlanywhere/openshift-sqlanywhere.git
 Versions:  ['16']
-License:   Developer License
+License:   SAP Software License
 Vendor:    SAP 
-Website: http://www.sybase.com
+Website: http://www.sap.com
 Categories:
   - service
   - database
@@ -33,8 +31,8 @@ Cart-Data:
     Type: cart_data
     Description: "DB connection command"
 Provides:
-  - sybase-sa-16
-  - "sa"
+  - sqlanywhere-16
+  - "sqlanywhere"
   - "sa(version) = 16"
 Publishes:
   publish-db-connection-info:
