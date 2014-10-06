@@ -1,4 +1,6 @@
 ---
+snapshot_exclusions:
+- sqlanywhere/*
 locked_files:
 - bin/
 - bin/*
