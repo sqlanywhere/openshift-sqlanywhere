@@ -124,7 +124,7 @@ function pre_snapshot {
 
   # Clean Up
 #  rm -rf SAbackup/
-  /bin/tar czf $OPENSHIFT_DATA_DIR/sqlanywhere_backup.tar.gz $OPENSHIFT_SA_DIR/data/
+  /bin/tar -C $OPENSHIFT_SA_DIR/data -czf $OPENSHIFT_DATA_DIR/sqlanywhere_backup.tar.gz .
 }
 
 function pre_restore {
@@ -132,7 +132,7 @@ return 0
 }
 
 function post_restore {
-  /bin/tar xvf $OPENSHIFT_DATA_DIR/sqlanywhere_backup.tar.gz $OPENSHIFT_SA_DIR/data/
+  /bin/tar -C $OPENSHIFT_SA_DIR/data -xvf $OPENSHIFT_DATA_DIR/sqlanywhere_backup.tar.gz 
 #  if [ ! -f $OPENSHIFT_DATA_DIR/sa_version ]
 #  then
 #    if [ "$OPENSHIFT_SA_VERSION" != "16" ]
