@@ -4,21 +4,26 @@ source $OPENSHIFT_CARTRIDGE_SDK_BASH
 function check_license {
 # Display License File
 client_result "======= SAP License ========="
-while read -r line; do client_result "$line"; done < $OPENSHIFT_SA_DIR/license/license.txt
+while read -r line; do client_result "$line"; done < $OPENSHIFT_SA_DIR/EULA/EULA.txt
 client_result "==== End of SAP License ====="
 client_result ""
 client_result "======= MUST READ ==========="
 client_result "You haven't accepted the license agreement,"
 client_result "thus the use of the cartridge is prohibited."
-client_result "-----------------------------"
-client_result "To indicate that you accept this license, "
+client_result ""
+client_result "To indicate that you have read and accepted this license, "
 client_result "please set the OPENSHIFT_SA_ACCEPT_SAP_LICENSE variable to "Y" with command:"
+client_result ""
 client_result "  rhc set-env OPENSHIFT_SA_ACCEPT_SAP_LICENSE=Y --app ${OPENSHIFT_APP_NAME}"
+client_result ""
 client_result "then start the cartridge with command:"
-client_result "  rhc cartridge-start sybase-sa-${OPENSHIFT_SA_VERSION} --app ${OPENSHIFT_APP_NAME}"
+client_result ""
+client_result "  rhc cartridge-start sqlanywhere --app ${OPENSHIFT_APP_NAME}"
+client_result ""
 client_result "============================="
 return 0
 }
+
 
 function _start_sa {
   dbspawn dbsrv16 -n ${OPENSHIFT_SA_DB_NAME} -oe ${OPENSHIFT_LOG_DIR}sa-startup.log -o ${OPENSHIFT_LOG_DIR}sa.log -on 10m -x tcpip{MyIP=${OPENSHIFT_SA_DB_HOST}\;port=${OPENSHIFT_SA_DB_PORT}} $OPENSHIFT_SA_DIR/data/sqa.db -n ${OPENSHIFT_SA_DB_NAME}
@@ -54,7 +59,21 @@ if [ ${OPENSHIFT_SA_ACCEPT_SAP_LICENSE} == Y ] || [ ${OPENSHIFT_SA_ACCEPT_SAP_LI
   fi
   return 0
 else
-  check_license
+  if [ ${OPENSHIFT_SA_FIRST_RUN} == Y ]; then
+    OPENSHIFT_SA_FIRST_RUN="N"
+    set_env_var 'OPENSHIFT_SA_FIRST_RUN' ${OPENSHIFT_SA_FIRST_RUN} $env_dir
+    client_result ""
+    client_result "   +-------------------------------------------------------+"
+    client_result "   |  THE SQL ANYWHERE SERVER HAS *NOT* BEEN STARTED YET!  |"  
+    client_result "   +-------------------------------------------------------+"
+    client_result ""
+    client_result "Before the SQL Anywhere Server can be started, you must view and accept the End User License Agreement"
+    client_result ""
+    client_result "Please read the license agreement and instruction on accepting:"
+    client_result "   rhc cartridge-start sqlanywhere --app ${OPENSHIFT_APP_NAME} | more"
+  else  
+    check_license
+  fi
 fi
 }
 
