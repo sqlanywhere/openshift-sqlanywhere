@@ -12,8 +12,8 @@ client_result "You haven't accepted the license agreement,"
 client_result "thus the use of the cartridge is prohibited."
 client_result "-----------------------------"
 client_result "To indicate that you accept this license, "
-client_result "please set the ACCEPT_SAP_LICENSE_SA variable to "Y" with command:"
-client_result "  rhc set-env ACCEPT_SAP_LICENSE_SA=Y --app ${OPENSHIFT_APP_NAME}"
+client_result "please set the OPENSHIFT_SA_ACCEPT_SAP_LICENSE variable to "Y" with command:"
+client_result "  rhc set-env OPENSHIFT_SA_ACCEPT_SAP_LICENSE=Y --app ${OPENSHIFT_APP_NAME}"
 client_result "then start the cartridge with command:"
 client_result "  rhc cartridge-start sybase-sa-${OPENSHIFT_SA_VERSION} --app ${OPENSHIFT_APP_NAME}"
 client_result "============================="
@@ -21,15 +21,15 @@ return 0
 }
 
 function _start_sa {
-  dbspawn dbsrv16 -n ${SA_DB_NAME} -oe ${OPENSHIFT_LOG_DIR}sa-startup.log -o ${OPENSHIFT_LOG_DIR}sa.log -on 10m -x tcpip{MyIP=${OPENSHIFT_SA_DB_HOST}\;port=${OPENSHIFT_SA_DB_PORT}} $OPENSHIFT_SA_DIR/data/sqa.db -n ${SA_DB_NAME}
+  dbspawn dbsrv16 -n ${OPENSHIFT_SA_DB_NAME} -oe ${OPENSHIFT_LOG_DIR}sa-startup.log -o ${OPENSHIFT_LOG_DIR}sa.log -on 10m -x tcpip{MyIP=${OPENSHIFT_SA_DB_HOST}\;port=${OPENSHIFT_SA_DB_PORT}} $OPENSHIFT_SA_DIR/data/sqa.db -n ${OPENSHIFT_SA_DB_NAME}
 }
 
 function _stop_sa {
-  dbstop -y -c "server=${SA_DB_NAME};uid=${SA_USERNAME};pwd=${SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})"
+  dbstop -y -c "server=${OPENSHIFT_SA_DB_NAME};uid=${OPENSHIFT_SA_USERNAME};pwd=${OPENSHIFT_SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})"
 }
 
 function _is_running {
-  dbping -q -c "server=${SA_DB_NAME};uid=${SA_USERNAME};pwd=${SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})" &> /dev/null
+  dbping -q -c "server=${OPENSHIFT_SA_DB_NAME};uid=${OPENSHIFT_SA_USERNAME};pwd=${OPENSHIFT_SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})" &> /dev/null
   return $?
 }
 
@@ -42,7 +42,7 @@ function wait_for_sa_availability {
 }
 
 function start {
-if [ ${ACCEPT_SAP_LICENSE_SA} == Y ] || [ ${ACCEPT_SAP_LICENSE_SA} == y ]; then
+if [ ${OPENSHIFT_SA_ACCEPT_SAP_LICENSE} == Y ] || [ ${OPENSHIFT_SA_ACCEPT_SAP_LICENSE} == y ]; then
   if ! _is_running; then
     echo "Starting SQL Anywhere"
     _start_sa
@@ -85,23 +85,16 @@ function status {
 function pre_snapshot {
   start
   echo "${OPENSHIFT_SA_VERSION}" > $OPENSHIFT_DATA_DIR/sa_version
-#  echo "${OPENSHIFT_SA_DB_PORT}" > $OPENSHIFT_DATA_DIR/sa_db_port
-#  echo "${OPENSHIFT_SA_IDENT}" > $OPENSHIFT_DATA_DIR/sa_ident
-#  echo "${SA_DB_NAME}" > $OPENSHIFT_DATA_DIR/sa_db_name
-#  echo "${SA_USERNAME}" > $OPENSHIFT_DATA_DIR/sa_username
-#  echo "${SA_PASSWORD}" > $OPENSHIFT_DATA_DIR/sa_password
-#  echo "${SA}" > $OPENSHIFT_DATA_DIR/sa
-#  echo "${SADATA}" > $OPENSHIFT_DATA_DIR/sadata
 
   if [ -d $OPENSHIFT_DATA_DIR/SAbackup ] 
   then
     rm -rf $OPENSHIFT_DATA_DIR/SAbackup
   fi
   mkdir $OPENSHIFT_DATA_DIR/SAbackup
-  dbbackup -s -c "server=${SA_DB_NAME};uid=${SA_USERNAME};pwd=${SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})" $OPENSHIFT_DATA_DIR/SAbackup 
+  dbbackup -s -c "server=${OPENSHIFT_SA_DB_NAME};uid=${OPENSHIFT_SA_USERNAME};pwd=${OPENSHIFT_SA_PASSWORD};links=tcpip(host=${OPENSHIFT_SA_DB_HOST};port=${OPENSHIFT_SA_DB_PORT})" $OPENSHIFT_DATA_DIR/SAbackup 
 
   # Backup the accepted_license file
-  cp $OPENSHIFT_SA_DIR/license/license_accepted  $OPENSHIFT_DATA_DIR/SAbackup/
+  #cp $OPENSHIFT_SA_DIR/license/license_accepted  $OPENSHIFT_DATA_DIR/SAbackup/
 
   stop
 
