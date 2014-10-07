@@ -54,7 +54,6 @@ if [ ${OPENSHIFT_SA_ACCEPT_SAP_LICENSE} == Y ] || [ ${OPENSHIFT_SA_ACCEPT_SAP_LI
     echo "Starting SQL Anywhere"
     _start_sa
     wait_for_sa_availability || error "Could not start SQL Anywhere" 70
-    sleep 30
     echo "SQL Anywhere started"
   else
     echo "SQL Anywhere already running"
